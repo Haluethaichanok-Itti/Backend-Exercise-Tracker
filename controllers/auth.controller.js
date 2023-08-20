@@ -1,18 +1,28 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { cloudinaryUploadProfile } from "../utils/upload.js";
+import {
+  cloudinaryUploadProfile,
+  cloudinaryUploadProfileCam,
+} from "../utils/upload.js";
 
 export const register = async (req, res) => {
   const height = Number(req.body.height);
   const weight = Number(req.body.weight);
-  if (req.file) {
+  const { picture } = req.body;
+
+  if (picture || req.file) {
     try {
-      const uploadedImage = await cloudinaryUploadProfile(req.file);
-      // console.log(req.body)
+      let uploadedImage = null;
+
+      if (req.file) {
+        uploadedImage = await cloudinaryUploadProfile(req.file);
+      } else if (picture.startsWith("data:image")) {
+        uploadedImage = await cloudinaryUploadProfileCam(picture);
+      }
+
       const { email, password } = req.body;
 
-      // Check that email must be unique
       const isUniqueEmail = await User.findOne({ email });
       if (isUniqueEmail) {
         return res
@@ -20,7 +30,6 @@ export const register = async (req, res) => {
           .json({ message: "This email already registered" });
       }
 
-      // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -32,17 +41,16 @@ export const register = async (req, res) => {
         picture: uploadedImage,
         rank: 0,
       });
+
       await user.save();
-      res.status(201).send({ message: "Create user succesfully" });
+      res.status(201).send({ message: "Create user successfully" });
     } catch (err) {
       res.status(403).send({ message: err.message });
     }
   } else {
     try {
-      // console.log(req.body)
       const { email, password } = req.body;
 
-      // Check that email must be unique
       const isUniqueEmail = await User.findOne({ email });
       if (isUniqueEmail) {
         return res
@@ -50,7 +58,6 @@ export const register = async (req, res) => {
           .send({ message: "This email already registered" });
       }
 
-      // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -62,8 +69,9 @@ export const register = async (req, res) => {
         picture: "",
         rank: 0,
       });
+
       await user.save();
-      res.status(201).send({ message: "Create user succesfully" });
+      res.status(201).send({ message: "Create user successfully" });
     } catch (err) {
       res.status(403).send({ message: err.message });
     }
