@@ -1,5 +1,8 @@
 import User from "../models/user.model.js";
-import { cloudinaryUploadProfile } from "../utils/upload.js";
+import {
+  cloudinaryUploadProfile,
+  cloudinaryUploadProfileCam,
+} from "../utils/upload.js";
 import Activity from "../models/activity.model.js";
 import Quote from "../models/quote.model.js";
 
@@ -49,7 +52,8 @@ export const getUser = async (req, res) => {
 
 // Edit profile
 export const editProfile = async (req, res) => {
-  if (req.file) {
+  const { picture } = req.body;
+  if (picture || req.file) {
     try {
       // console.log(req.body)
       const { email, password } = req.body;
@@ -77,7 +81,12 @@ export const editProfile = async (req, res) => {
       }
 
       //upload picture profile
-      const uploadedImage = await cloudinaryUploadProfile(req.file);
+      let uploadedImage = null;
+      if (req.file) {
+        uploadedImage = await cloudinaryUploadProfile(req.file);
+      } else if (picture.startsWith("data:image")) {
+        uploadedImage = await cloudinaryUploadProfileCam(picture);
+      }
       // Update other profile fields
       account.password = req.body.password;
       account.email = email || account.email;
@@ -85,7 +94,7 @@ export const editProfile = async (req, res) => {
       account.lastName = req.body.lastName || account.lastName;
       account.birthDate = req.body.birthDate || account.birthDate;
       account.gender = req.body.gender || account.gender;
-      account.picture = uploadedImage;
+      account.picture = uploadedImage || req.body.picture;
       account.weight = req.body.weight || account.weight;
       account.height = req.body.height || account.height;
       account.rank = req.body.rank;
